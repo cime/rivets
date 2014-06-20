@@ -1,5 +1,5 @@
 // Rivets.js
-// version: 0.6.8
+// version: 0.6.9
 // author: Michael Richards
 // license: MIT
 (function() {
@@ -608,25 +608,27 @@
     function KeypathParser() {}
 
     KeypathParser.parse = function(keypath, interfaces, root) {
-      var char, current, index, tokens, _i, _ref1;
+      var firstPathRegex, match, path, splitChars, splits, subsequentPathRegex, tokens, word;
       tokens = [];
-      current = {
-        "interface": root,
-        path: ''
-      };
-      for (index = _i = 0, _ref1 = keypath.length; _i < _ref1; index = _i += 1) {
-        char = keypath.charAt(index);
-        if (__indexOf.call(interfaces, char) >= 0) {
-          tokens.push(current);
-          current = {
-            "interface": char,
-            path: ''
-          };
-        } else {
-          current.path += char;
-        }
+      splitChars = interfaces.join('');
+      splits = '[' + splitChars + ']';
+      word = '[^' + splitChars + "']";
+      path = "(?:'(.+?)'|(" + word + '+))';
+      firstPathRegex = new RegExp('^' + path);
+      subsequentPathRegex = new RegExp("(" + splits + ")" + path, 'g');
+      match = firstPathRegex.exec(keypath);
+      if (match) {
+        tokens.push({
+          "interface": root,
+          path: match[1] || match[2]
+        });
       }
-      tokens.push(current);
+      while ((match = subsequentPathRegex.exec(keypath)) !== null) {
+        tokens.push({
+          "interface": match[1],
+          path: match[2] || match[3]
+        });
+      }
       return tokens;
     };
 
@@ -1143,7 +1145,7 @@
     weakmap: {},
     weakReference: function(obj) {
       var id;
-      if (obj[this.id] == null) {
+      if (!obj.hasOwnProperty(this.id)) {
         id = this.counter++;
         this.weakmap[id] = {
           callbacks: {}
